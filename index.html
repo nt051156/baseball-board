@@ -502,12 +502,14 @@ function escHtml(s){const d=document.createElement('div');d.textContent=s;return
 // ==================== RENDER ====================
 function copyLineupFrom(srcIdx,dstIdx){
   if(!confirm('試合'+(srcIdx+1)+'の打順・守備配置をコピーします。現在の設定は上書きされます。よろしいですか？'))return;
-  const src=games[srcIdx],dst=games[dstIdx];
-  dst.players.forEach(function(dp){
-    var sp=src.players.find(function(s){return s.id===dp.id;});
-    if(sp){dp.lineup=sp.lineup;dp.position=sp.position;}
-    else{dp.lineup=-1;}
+  var src=games[srcIdx],dst=games[dstIdx];
+  var copied=JSON.parse(JSON.stringify(src.players));
+  copied.forEach(function(cp){
+    var dp=dst.players.find(function(p){return p.id===cp.id;});
+    if(dp){cp.at_bat=dp.at_bat;cp.hit=dp.hit;cp.out=dp.out;cp.rbi=dp.rbi;cp.stolen_base=dp.stolen_base;cp.error=dp.error;cp.condition=dp.condition;}
+    else{cp.at_bat=0;cp.hit=0;cp.out=0;cp.rbi=0;cp.stolen_base=0;cp.error=0;}
   });
+  dst.players=copied;
   dst.markerPositions=JSON.parse(JSON.stringify(src.markerPositions));
   saveAll();renderAll();
 }
