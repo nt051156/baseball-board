@@ -110,6 +110,10 @@ html,body{width:100%;height:100%;overflow:hidden;margin:0;padding:0;font-family:
 .stat-avg{background:#f0f0ff;border:2px solid #2a3a6a;border-radius:6px;padding:8px;text-align:center;margin-top:6px;grid-column:1/-1;}
 .stat-avg .avg-label{font-size:11px;color:#666;}
 .stat-avg .avg-value{font-size:28px;font-weight:bold;color:#2a3a6a;}
+.spinner{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.spin-btn{width:100%;padding:4px 0;background:#e8e8e0;border:1px solid #ccc;border-radius:4px;cursor:pointer;font-size:14px;font-family:inherit;color:#2a3a6a;font-weight:bold;line-height:1;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+.spin-btn:active{background:#d0d0c8;}
+.spin-value{font-size:22px;font-weight:bold;color:#2a3a6a;min-width:40px;text-align:center;padding:2px 0;user-select:none;-webkit-user-select:none;}
 
 .title-text{color:#ffd700;font-size:16px;font-weight:bold;letter-spacing:2px;text-shadow:0 0 8px rgba(255,215,0,0.4);flex-shrink:0;white-space:nowrap;}
 .flex-spacer{flex:1;}
@@ -176,12 +180,12 @@ html,body{width:100%;height:100%;overflow:hidden;margin:0;padding:0;font-family:
     </div>
     <h3 style="font-size:13px;margin-top:8px;">打撃成績</h3>
     <div class="modal-stats">
-      <div class="modal-field"><label>打席数</label><input type="number" id="edit-at-bat" min="0" max="999"></div>
-      <div class="modal-field"><label>安打数</label><input type="number" id="edit-hit" min="0" max="999"></div>
-      <div class="modal-field"><label>凡打数</label><input type="number" id="edit-out" min="0" max="999"></div>
-      <div class="modal-field"><label>打点</label><input type="number" id="edit-rbi" min="0" max="999"></div>
-      <div class="modal-field"><label>盗塁</label><input type="number" id="edit-sb" min="0" max="999"></div>
-      <div class="modal-field"><label>エラー</label><input type="number" id="edit-error" min="0" max="999"></div>
+      <div class="modal-field"><label>打席数</label><div class="spinner" id="edit-at-bat"><button class="spin-btn spin-up" type="button">▲</button><span class="spin-value">0</span><button class="spin-btn spin-down" type="button">▼</button></div></div>
+      <div class="modal-field"><label>安打数</label><div class="spinner" id="edit-hit"><button class="spin-btn spin-up" type="button">▲</button><span class="spin-value">0</span><button class="spin-btn spin-down" type="button">▼</button></div></div>
+      <div class="modal-field"><label>凡打数</label><div class="spinner" id="edit-out"><button class="spin-btn spin-up" type="button">▲</button><span class="spin-value">0</span><button class="spin-btn spin-down" type="button">▼</button></div></div>
+      <div class="modal-field"><label>打点</label><div class="spinner" id="edit-rbi"><button class="spin-btn spin-up" type="button">▲</button><span class="spin-value">0</span><button class="spin-btn spin-down" type="button">▼</button></div></div>
+      <div class="modal-field"><label>盗塁</label><div class="spinner" id="edit-sb"><button class="spin-btn spin-up" type="button">▲</button><span class="spin-value">0</span><button class="spin-btn spin-down" type="button">▼</button></div></div>
+      <div class="modal-field"><label>エラー</label><div class="spinner" id="edit-error"><button class="spin-btn spin-up" type="button">▲</button><span class="spin-value">0</span><button class="spin-btn spin-down" type="button">▼</button></div></div>
       <div class="stat-avg">
         <div class="avg-label">打率（安打÷打席）</div>
         <div class="avg-value" id="edit-avg">.000</div>
@@ -680,22 +684,39 @@ function setupMarkerDrag(marker,player){
 }
 
 // ==================== MODAL ====================
+function getSpinVal(id){return parseInt(document.getElementById(id).querySelector('.spin-value').textContent)||0;}
+function setSpinVal(id,v){document.getElementById(id).querySelector('.spin-value').textContent=Math.max(0,v);}
+function setupSpinners(){
+  document.querySelectorAll('.spinner').forEach(function(sp){
+    var valEl=sp.querySelector('.spin-value');
+    function step(dir){var v=parseInt(valEl.textContent)||0;v=Math.max(0,v+dir);valEl.textContent=v;updateModalAvg();}
+    function addHold(btn,dir){
+      var tid=null,iid=null;
+      function start(e){e.preventDefault();step(dir);tid=setTimeout(function(){iid=setInterval(function(){step(dir);},100);},500);}
+      function stop(){clearTimeout(tid);clearInterval(iid);tid=null;iid=null;}
+      btn.addEventListener('pointerdown',start);
+      btn.addEventListener('pointerup',stop);
+      btn.addEventListener('pointerleave',stop);
+      btn.addEventListener('pointercancel',stop);
+    }
+    addHold(sp.querySelector('.spin-up'),1);
+    addHold(sp.querySelector('.spin-down'),-1);
+  });
+}
 function updateModalAvg(){
-  const ab=parseInt(document.getElementById('edit-at-bat').value)||0;
-  const h=parseInt(document.getElementById('edit-hit').value)||0;
-  document.getElementById('edit-avg').textContent=calcAvg(ab,h);
+  document.getElementById('edit-avg').textContent=calcAvg(getSpinVal('edit-at-bat'),getSpinVal('edit-hit'));
 }
 function openModal(pid){
   const p=g().players.find(x=>x.id===pid);if(!p)return;
   editingPlayerId=pid;
   document.getElementById('edit-name').value=p.name;
   document.getElementById('edit-position').value=p.position;
-  document.getElementById('edit-at-bat').value=p.at_bat||0;
-  document.getElementById('edit-hit').value=p.hit||0;
-  document.getElementById('edit-out').value=p.out||0;
-  document.getElementById('edit-rbi').value=p.rbi||0;
-  document.getElementById('edit-sb').value=p.stolen_base||0;
-  document.getElementById('edit-error').value=p.error||0;
+  setSpinVal('edit-at-bat',p.at_bat||0);
+  setSpinVal('edit-hit',p.hit||0);
+  setSpinVal('edit-out',p.out||0);
+  setSpinVal('edit-rbi',p.rbi||0);
+  setSpinVal('edit-sb',p.stolen_base||0);
+  setSpinVal('edit-error',p.error||0);
   updateModalAvg();
   document.querySelectorAll('.modal-cond-btn').forEach(b=>b.classList.toggle('selected',b.dataset.cond===p.condition));
   document.getElementById('modal-overlay').classList.add('show');
@@ -706,12 +727,12 @@ function saveModal(){
   const p=g().players.find(x=>x.id===editingPlayerId);if(!p){closeModal();return;}
   p.name=document.getElementById('edit-name').value.trim()||'選手';
   p.position=document.getElementById('edit-position').value;
-  p.at_bat=parseInt(document.getElementById('edit-at-bat').value)||0;
-  p.hit=parseInt(document.getElementById('edit-hit').value)||0;
-  p.out=parseInt(document.getElementById('edit-out').value)||0;
-  p.rbi=parseInt(document.getElementById('edit-rbi').value)||0;
-  p.stolen_base=parseInt(document.getElementById('edit-sb').value)||0;
-  p.error=parseInt(document.getElementById('edit-error').value)||0;
+  p.at_bat=getSpinVal('edit-at-bat');
+  p.hit=getSpinVal('edit-hit');
+  p.out=getSpinVal('edit-out');
+  p.rbi=getSpinVal('edit-rbi');
+  p.stolen_base=getSpinVal('edit-sb');
+  p.error=getSpinVal('edit-error');
   const sc=document.querySelector('.modal-cond-btn.selected');if(sc)p.condition=sc.dataset.cond;
   saveAll();closeModal();renderAll();
 }
@@ -772,8 +793,7 @@ function init(){
   document.getElementById('modal-cancel').addEventListener('click',closeModal);
   document.getElementById('modal-delete').addEventListener('click',deletePlayer);
   document.getElementById('modal-overlay').addEventListener('click',(e)=>{if(e.target.id==='modal-overlay')closeModal();});
-  document.getElementById('edit-at-bat').addEventListener('input',updateModalAvg);
-  document.getElementById('edit-hit').addEventListener('input',updateModalAvg);
+  setupSpinners();
   document.getElementById('btn-add-player').addEventListener('click',addPlayer);
   document.getElementById('btn-reset').addEventListener('click',resetAll);
   document.getElementById('time-start').addEventListener('input',(e)=>{g().timeStart=e.target.value;saveAll();});
