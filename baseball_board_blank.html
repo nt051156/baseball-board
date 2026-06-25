@@ -464,7 +464,7 @@ function conditionBadge(c){
   return '<span class="cond-badge cond-normal">😐</span>';
 }
 function calcAvg(ab,h){
-  if(!ab||ab===0)return '.000';
+  if(!ab||ab===0)return '---';
   const avg=h/ab;
   if(avg>=1)return '1.000';
   return avg.toFixed(3).replace('0.','.');
